@@ -15,6 +15,7 @@ For <poolkey> and <farmerkey> see output of `chia keys show`.
 <tmpdir> needs about 220 GiB space, it will handle about 25% of all writes. (Examples: './', '/mnt/tmp/')
 <tmpdir2> needs about 110 GiB space and ideally is a RAM drive, it will handle about 75% of all writes.
 Combined (tmpdir + tmpdir2) peak disk usage is less than 256 GiB.
+In case of <count> != 1, you may press Ctrl-C for graceful termination after current plot is finished.
 
 Usage:
   chia_plot [OPTION...]
@@ -39,11 +40,17 @@ With the new default of 256 buckets it's about 0.5 GB per thread at most.
 ### RAM disk setup on Linux
 `sudo mount -t tmpfs -o size=110G tmpfs /mnt/ram/`
 
+Note: 128 GiB System RAM minimum required for RAM disk.
+
 ## How to Support
 
 XCH: xch1w5c2vv5ak08pczeph7tp5xmkl5762pdf3pyjkg9z4ks4ed55j3psgay0zh
 
-I developed this on my own time, even though I already filled all my HDDs (~50 TiB) with the official (slow) plotter.
+ETH: 0x97057cdf529867838d2a1f7f23ba62456764e0cd
+
+LTC: MNUnszsX2srv5EJpu9YYHAXb19MqUpuBjD
+
+BTC: 15GSE5ymStxXMvJ58hyosEVm4FXFxUyJZg
 
 ## Results
 
@@ -119,7 +126,6 @@ keeping most of the load off the CPUs.
 ## Dependencies
 
 - cmake (>=3.14)
-- libgmp3-dev
 - libsodium-dev
 
 ## Install
@@ -131,7 +137,7 @@ https://github.com/stotiks/chia-plotter/releases
 ---
 ### Arch Linux
 ```bash
-sudo pamac install cmake gmp libgmp-static libsodium libsodium-static gcc10
+sudo pamac install cmake libsodium libsodium-static gcc10
 # Checkout the source and install
 git clone https://github.com/madMAx43v3r/chia-plotter.git 
 cd chia-plotter
@@ -151,7 +157,7 @@ cd chia-plotter
 
 git submodule update --init
 sudo yum install epel-release -y
-sudo yum install cmake3 gmp-devel libsodium gmp-static libsodium-static -y
+sudo yum install cmake3 libsodium libsodium-static -y
 ln /usr/bin/cmake3 /usr/bin/cmake
 # Install a package with repository for your system:
 # On CentOS, install package centos-release-scl available in CentOS repository:
@@ -164,9 +170,13 @@ scl enable devtoolset-7 bash
 ./build/chia_plot --help
 ```
 ---
+### Clear Linux
+Read [install file](doc/install_clearlinux.md)
+
+---
 ### Ubuntu 20.04
 ```bash
-sudo apt install -y libsodium-dev libgmp3-dev cmake g++ git
+sudo apt install -y libsodium-dev cmake g++ git
 # Checkout the source and install
 git clone https://github.com/madMAx43v3r/chia-plotter.git 
 cd chia-plotter
@@ -179,18 +189,46 @@ git submodule update --init
 The binaries will end up in `build/`, you can copy them elsewhere freely (on the same machine, or similar OS).
 
 ---
-### macOS Big Sur
-First you need to install a package manager called [Brew](https://brew.sh/) and [Xcode](https://apps.apple.com/app/xcode/id497799835) from the Apple App Store.
+### macOS
+First you need to install a package manager called [Brew](https://brew.sh/) and [Xcode](https://apps.apple.com/app/xcode/id497799835) OR [CommandLineTools](https://developer.apple.com/download/).
 ```bash
-brew install libsodium gmp cmake git autoconf automake libtool wget
+# Alternative way to download CommandLineTools on Terminal:
+xcode-select --install
+
+brew install libsodium cmake git autoconf automake libtool wget
+
+# If you downloaded Xcode run these:
+sudo ln -s /usr/local/include/sodium.h /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/
+sudo ln -s /usr/local/include/sodium /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/
+
+# If you downloaded CommandLineTools run these:
+sudo ln -s /usr/local/include/sodium.h /Library/Developer/CommandLineTools/usr/include
+sudo ln -s /usr/local/include/sodium /Library/Developer/CommandLineTools/usr/include
+
 brew link cmake
+```
+
+Confirm which directory you have on YOUR Mac before applying following commands
+```
 wget https://raw.githubusercontent.com/facebookincubator/fizz/master/build/fbcode_builder/CMake/FindSodium.cmake -O /usr/local/opt/cmake/share/cmake/Modules/FindSodium.cmake
+```
+ or
+``` 
+wget https://raw.githubusercontent.com/facebookincubator/fizz/master/build/fbcode_builder/CMake/FindSodium.cmake -O /opt/homebrew/Cellar/cmake/3.20.3/share/cmake/Modules/FindSodium.cmake
+```
+
+```
 git clone https://github.com/madMAx43v3r/chia-plotter.git 
 cd chia-plotter
 git submodule update --init
 ./make_devel.sh
 ./build/chia_plot --help
 ```
+If a maximum open file limit error occurs (as default OS setting is 256, which is too low for default bucket size of `256`), run this before starting the plotter
+```
+ulimit -n 3000
+```
+This file limit change will only affect the current session.
 
 ## Running in a Docker container
 
@@ -226,7 +264,7 @@ So, for example, the following command:
 docker run \
   -v <path-to-your-tmp-dir>:/mnt/harvester \
   -v <path-to-your-final-dir>:/mnt/farm \
-  -m 8000 \
+  -m 8G \
   --cpus 8 \
   odelucca/chia-plotter \
     -t /mnt/harvester/ \
